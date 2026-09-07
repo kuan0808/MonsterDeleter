@@ -1,0 +1,37 @@
+# Xcode / Swift build products
+build/
+DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM
+*.dSYM.zip
+.build/
+.swiftpm/
+Packages/
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.moved-aside
+*.hmap
+
+# macOS
+.DS_Store
+
+# Upstream MonsterDeleter artwork (never committed)
+assets/upstream/
+
+# Pack authoring scratch: seeds, clips and cut frames. It lives in the worktree because
+# `kie-axi upload` refuses paths outside it, and none of it is committed.
+.pack-work/
+
+# Python bytecode from scripts/lib
+__pycache__/
+
+# graft's local graph cache - regenerable, not committed (run `graft build`).
+/graft/
+
+# Local development records are not public source.
+/docs/evidence/

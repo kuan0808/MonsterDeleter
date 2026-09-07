@@ -1,0 +1,58 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Reviewed candidate tag, for example v0.4.0-build7'
+        required: true
+        type: string
+      source_run:
+        description: 'Successful Release candidate run ID'
+        required: true
+        type: string
+      source_commit:
+        description: 'Reviewed full 40-character source commit SHA'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'kuan0808/monsterdeleter-mac' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate trusted successful source run
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release.py source-run "$SOURCE_RUN" "$SOURCE_COMMIT"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run }}
+          artifact-ids: ${{ steps.source.outputs.artifact-id }}
+          merge-multiple: true
+          path: build/release
+      - name: Verify downloaded candidate identity
+        run: python3 scripts/release.py verify build/release "$RELEASE_TAG" "$SOURCE_COMMIT" "$SOURCE_RUN"
+      - name: Publish complete verified draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release.py publish build/release "$RELEASE_TAG" "$SOURCE_COMMIT" "$SOURCE_RUN"

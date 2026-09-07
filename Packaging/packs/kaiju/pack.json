@@ -1,0 +1,32 @@
+{
+  "name": "Kaiju",
+  "description": "A spiked vinyl toy monster with a taste for files, and the helmeted rescuer who hauls it away.",
+  "framesPerSecond": 8,
+  "characterHeight": 250,
+  "explosionHeight": 150,
+  "explosionFanRadius": 75,
+  "walkSeconds": 4.5,
+  "flySeconds": 2,
+  "pointFrames": [11, 14],
+  "kickImpactFrame": 8,
+  "tint": "#ADC2BA",
+  "sheets": {
+    "walk": { "file": "walk.png", "columns": 5, "rows": 3 },
+    "point": { "file": "point.png", "columns": 5, "rows": 3 },
+    "kick": { "file": "kick.png", "columns": 5, "rows": 3 },
+    "explosion": { "file": "explosion.png", "columns": 5, "rows": 3 },
+    "rescuer": { "file": "rescuer.png", "columns": 5, "rows": 3 },
+    "fly": { "file": "fly.png", "columns": 5, "rows": 3 }
+  },
+  "audio": {
+    "bgm": { "file": "bgm.wav", "volume": 0.5, "loops": true },
+    "voice": { "file": "voice.wav", "volume": 1.0, "loops": false },
+    "explosion": { "file": "explosion.wav", "volume": 0.3, "loops": false }
+  },
+  "texts": {
+    "bubble": "Rrrgh! Is this the one?",
+    "bubbleMany": "Rrrgh! All {count} of them?",
+    "confirm": "Yes",
+    "alternate": "Yes, chomp it!"
+  }
+}

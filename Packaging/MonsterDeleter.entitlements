@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Not sandboxed: the app trashes files anywhere the user can. Kept as a file so every build
+       signs with the same entitlements and the same identifier, which keeps TCC and
+       LaunchServices records stable across rebuilds. -->
+  <key>com.apple.security.app-sandbox</key>
+  <false/>
+</dict>
+</plist>

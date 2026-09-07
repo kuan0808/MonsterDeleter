@@ -1,0 +1,27 @@
+MonsterDeleter for macOS 15 or later
+Universal app for Apple silicon and Intel Macs
+
+1. Download the DMG, open it, and drag MonsterDeleter to Applications.
+   Alternatively, extract the ZIP and move MonsterDeleter.app to Applications.
+2. Quit any older copy before opening the installed app. Keep one copy running.
+3. Follow the introduction. The app stays in the menu bar, with no Dock icon.
+4. Try Play Demo and press Esc while the monster asks. Then try confirmation.
+5. In Finder, select a disposable file or folder, then right-click and choose
+   Services > Feed to Monster. Confirm to move the selection to the Trash.
+
+MonsterDeleter only moves targets to the Trash. Esc cancels before impact.
+Finder owns restoration; Put Back availability and restored names can vary.
+Settings (Command-comma) contains character packs, sound, and optional icon aiming.
+Accessibility permission is optional and only needed for icon aiming.
+
+Stable releases are Developer ID signed, notarized by Apple, and stapled.
+If macOS reports damage or cannot verify the app, stop and download it again
+from the same official release. Do not disable Gatekeeper or remove quarantine.
+Report the release version and the exact message if it still does not open.
+
+Optional integrity check: download SHA256SUMS.txt, INSTALL.txt and both archives
+into one folder. In Terminal, change to that folder and run:
+  shasum -a 256 -c SHA256SUMS.txt
+Every listed file should report OK. The release notes also show these hashes.
+
+To uninstall, quit MonsterDeleter from its menu bar and move the app to Trash.

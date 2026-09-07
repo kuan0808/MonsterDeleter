@@ -1,0 +1,26 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Exact plist version/build tag, for example v0.4.0-build7'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    if: github.repository == 'kuan0808/monsterdeleter-mac' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_tag: ${{ inputs.tag }}
+    secrets:
+      DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+      DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}

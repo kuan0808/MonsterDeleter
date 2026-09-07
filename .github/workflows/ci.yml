@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        default: ''
+    secrets:
+      DEVELOPER_ID_P12_BASE64:
+        required: false
+      DEVELOPER_ID_P12_PASSWORD:
+        required: false
+      CODESIGN_IDENTITY:
+        required: false
+      NOTARY_APPLE_ID:
+        required: false
+      NOTARY_TEAM_ID:
+        required: false
+      NOTARY_PASSWORD:
+        required: false
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-lint:
+    runs-on: macos-26
+    timeout-minutes: 30
+    outputs:
+      artifact-id: ${{ steps.upload-universal.outputs.artifact-id }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release contract regressions
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Validate public build entry point
+        if: inputs.release_tag != ''
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          python3 scripts/release.py context
+          python3 scripts/release.py version "$RELEASE_TAG"
+      - name: Configure ephemeral release signing
+        if: inputs.release_tag != ''
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: scripts/release-signing.sh setup
+      - name: Toolchain
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          swift --version
+          swift_version="$(swift --version 2>&1 | sed -nE 's/.*Swift version ([0-9]+\.[0-9]+).*/\1/p')"
+          test "$swift_version" = 6.3
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: swiftpm-macos-26-${{ runner.arch }}-xcode-26.5-swift-6.3-universal-release-native-debug-${{ hashFiles('Package.swift', 'Package.resolved') }}
+
+      - run: swift build -c release
+      # The bundle comes first so bundle-inspection tests see the actual executable and resources.
+      - run: scripts/build-app.sh
+      - run: scripts/test-packaging.sh
+      # Main-actor rendering fixtures can starve ShowDirector's real-clock waits on a loaded runner.
+      # Explicit serialization keeps every assertion and deadline while isolating those fixtures.
+      - run: swift test --no-parallel
+      - run: scripts/lint.sh
+      - run: scripts/self-test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: self-test-macos-26-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/self-test
+          if-no-files-found: ignore
+      - run: PACKAGE_DMG=1 scripts/package.sh
+        if: inputs.release_tag == ''
+      - name: Build and notarize public artifacts
+        if: inputs.release_tag != ''
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+          PACKAGE_DMG: '1'
+          NOTARY_REQUIRED: '1'
+        run: scripts/notarize.sh
+      - name: Inspect archived app and bind checksums
+        run: |
+          mkdir -p build/unpacked
+          ditto -x -k build/MonsterDeleter-*.zip build/unpacked
+          scripts/check-app.sh build/unpacked/MonsterDeleter.app
+          shasum -a 256 build/unpacked/MonsterDeleter.app/Contents/MacOS/MonsterDeleter | awk '{print $1}' > build/executable.sha256
+          cd build
+          shasum -a 256 MonsterDeleter-*.zip > archive.sha256
+      - name: Check DMG contains the identical archived app
+        run: |
+          mkdir -p build/dmg-check
+          hdiutil attach -quiet -readonly -nobrowse -mountpoint build/dmg-check build/MonsterDeleter-*.dmg
+          trap 'hdiutil detach -quiet build/dmg-check' EXIT
+          diff -qr build/unpacked/MonsterDeleter.app build/dmg-check/MonsterDeleter.app
+      - name: Stage user downloads and candidate identity
+        if: inputs.release_tag != ''
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: python3 scripts/release.py stage "$RELEASE_TAG"
+      - uses: actions/upload-artifact@v4
+        if: inputs.release_tag != ''
+        with:
+          name: release-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/release/
+          if-no-files-found: error
+      - name: Remove ephemeral signing credentials
+        if: always() && inputs.release_tag != ''
+        run: scripts/release-signing.sh cleanup
+      - uses: actions/upload-artifact@v4
+        id: upload-universal
+        with:
+          name: MonsterDeleter-universal-${{ inputs.release_tag && 'notarized' || 'ad-hoc' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/MonsterDeleter-*.zip
+            build/MonsterDeleter-*.dmg
+            build/archive.sha256
+            build/executable.sha256
+          if-no-files-found: error
+
+  macos-15-runtime:
+    needs: build-test-lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: arm64
+          - runner: macos-15-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build-test-lint.outputs.artifact-id }}
+          merge-multiple: true
+          path: build/download
+      - name: Verify identical artifact on native macOS 15
+        run: |
+          sw_vers
+          test "$(sw_vers -productVersion | cut -d. -f1)" = 15
+          test "$(uname -m)" = '${{ matrix.architecture }}'
+          xcodebuild -version
+          swift --version
+          cd build/download
+          shasum -a 256 -c archive.sha256
+          ditto -x -k MonsterDeleter-*.zip .
+          test "$(shasum -a 256 MonsterDeleter.app/Contents/MacOS/MonsterDeleter | awk '{print $1}')" = "$(cat executable.sha256)"
+      - run: scripts/check-app.sh build/download/MonsterDeleter.app
+      # This path never invokes the compiler. Both jobs consume the build job's signed zip.
+      - run: scripts/self-test.sh --prebuilt-app build/download/MonsterDeleter.app
+      - name: Verify active executable slice
+        run: |
+          grep -Fx 'autoplay executable slice ${{ matrix.architecture }}' build/self-test/confirm.log
+          grep -Fx 'autoplay executable slice ${{ matrix.architecture }}' build/self-test/esc.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: self-test-${{ matrix.runner }}-${{ matrix.architecture }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/self-test
+          if-no-files-found: error
