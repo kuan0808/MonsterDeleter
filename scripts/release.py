@@ -25,11 +25,13 @@ def version(tag, plist=None):
     return number, build
 
 
-def github(*args):
-    return subprocess.check_output(['gh', *args], text=True)
+def github(*args, input=None):
+    return subprocess.check_output(['gh', *args], text=True, input=input)
 
 
-def api(path):
+def api(path, data=None):
+    if data is not None:
+        return json.loads(github('api', path, '--method', 'POST', '--input', '-', input=json.dumps(data)))
     return json.loads(github('api', path))
 
 
@@ -185,13 +187,13 @@ def publish(directory, tag, sha, run_id):
                   or exact[0]['object']['type'] != 'commit'):
         raise ValueError('tag already exists or moved; never overwrite or move a version tag')
     if not existing:
-        github('release', 'create', tag, '--repo', target, '--draft', '--target', target_sha,
-               '--title', title, '--notes-file', str(directory / 'release-notes.md'))
-        pages = json.loads(github('api', f'repos/{target}/releases?per_page=100', '--paginate', '--slurp'))
-        drafts = [item for page in pages for item in page if item['tag_name'] == tag and item['draft']]
-        if len(drafts) != 1:
-            raise ValueError('could not identify the new draft; refusing uploads')
-        release = drafts[0]
+        release = api(f'repos/{target}/releases', dict(tag_name=tag, target_commitish=target_sha,
+                      name=title, body=body, draft=True, prerelease=False))
+        if (not isinstance(release, dict) or type(release.get('id')) is not int or release['id'] <= 0
+                or release.get('draft') is not True or release.get('prerelease') is not False
+                or release.get('tag_name') != tag or release.get('target_commitish') != target_sha
+                or release.get('name') != title or release.get('body') != body):
+            raise ValueError('release creation response differs from candidate; refusing uploads')
     assets = api(f'repos/{target}/releases/{release["id"]}/assets?per_page=100')
     expected = manifest['assets']
     seen = set()

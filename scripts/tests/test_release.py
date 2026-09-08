@@ -84,7 +84,12 @@ if args[0] == 'api':
     if endpoint == 'repos/kuan0808/MonsterDeleter':
         result = {'private': False, 'default_branch': 'main'}
     elif '/releases?' in endpoint:
-        result = [[state['release']] if state['release'] else []]
+        result = [[state['release']] if state['release'] and not state.get('stale_list') else []]
+    elif endpoint == 'repos/kuan0808/MonsterDeleter/releases' and '--method' in args:
+        assert args[args.index('--method') + 1] == 'POST'
+        assert args[args.index('--input') + 1] == '-'
+        state['release'] = dict(json.load(sys.stdin), id=10)
+        result = state.get('creation_response', state['release'])
     elif '/commits/' in endpoint:
         result = {'sha': 'a' * 40}
     elif '/matching-refs/' in endpoint:
@@ -92,18 +97,16 @@ if args[0] == 'api':
     elif endpoint.endswith('/git/refs'):
         state['refs'] = [{'ref': 'refs/tags/v0.4.0-build7', 'object': {'sha': 'a' * 40, 'type': 'commit'}}]
     elif '/assets?' in endpoint:
+        assert endpoint == f"repos/kuan0808/MonsterDeleter/releases/{state['release']['id']}/assets?per_page=100"
         result = state['assets']
     elif '/releases/tags/' in endpoint:
         sys.exit('tag lookup is for published releases; list drafts instead')
     elif '/releases/' in endpoint:
+        assert endpoint == f"repos/kuan0808/MonsterDeleter/releases/{state['release']['id']}"
         result = state['release']
 else:
     action = args[1]
-    if action == 'create':
-        state['release'] = dict(id=10, draft=True, prerelease=False, tag_name=args[2],
-            name=args[args.index('--title') + 1], target_commitish=args[args.index('--target') + 1],
-            body=Path(args[args.index('--notes-file') + 1]).read_text())
-    elif action == 'upload':
+    if action == 'upload':
         if state.get('fail_upload') and len(state['assets']) >= 1:
             state['fail_upload'] = False
             path.write_text(json.dumps(state))
@@ -128,6 +131,55 @@ print(json.dumps(result))
                    GITHUB_EVENT_NAME='workflow_dispatch', GITHUB_SHA='a' * 40)
         return env, state
 
+    def test_new_draft_publishes_exact_assets_when_release_list_is_stale(self):
+        with tempfile.TemporaryDirectory() as directory:
+            candidate, manifest = self.candidate_fixture(directory)
+            env, state_path = self.publisher_fixture(directory, candidate)
+            state = json.loads(state_path.read_text())
+            state['stale_list'] = True
+            state_path.write_text(json.dumps(state))
+            result = self.run_release('publish', str(candidate), manifest['tag'], 'a' * 40, '123', env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            state = json.loads(state_path.read_text())
+            self.assertEqual(state['release'], dict(id=10, draft=False, prerelease=False,
+                tag_name='v0.4.0-build7', target_commitish='a' * 40,
+                name='MonsterDeleter 0.4.0 (build 7)', body='Reviewed release notes\n'))
+            self.assertEqual(len(state['assets']), 4)
+            self.assertEqual({asset['name']: (asset['state'], asset['size'], asset['digest'])
+                              for asset in state['assets']},
+                             {name: ('uploaded', (candidate / name).stat().st_size, 'sha256:' + digest)
+                              for name, digest in manifest['assets'].items()})
+            self.assertEqual(state['refs'], [{'ref': 'refs/tags/v0.4.0-build7',
+                                              'object': {'sha': 'a' * 40, 'type': 'commit'}}])
+
+    def test_mismatched_creation_response_stops_before_uploads(self):
+        release = dict(id=10, draft=True, prerelease=False, tag_name='v0.4.0-build7',
+                       target_commitish='a' * 40, name='MonsterDeleter 0.4.0 (build 7)',
+                       body='Reviewed release notes\n')
+        responses = [release | delta for delta in (
+            {'id': 0}, {'id': -1}, {'id': True}, {'id': '10'}, {'id': 10.5},
+            {'draft': False}, {'draft': 'true'}, {'prerelease': True}, {'prerelease': 0},
+            {'tag_name': 'v0.4.0-build8'}, {'target_commitish': 'b' * 40},
+            {'name': 'Other release'}, {'body': 'Other notes'})]
+        responses += [{key: value for key, value in release.items() if key != missing}
+                      for missing in release]
+        responses += [None, []]
+        for response in responses:
+            with self.subTest(response=response), tempfile.TemporaryDirectory() as directory:
+                candidate, manifest = self.candidate_fixture(directory)
+                env, state_path = self.publisher_fixture(directory, candidate)
+                state = json.loads(state_path.read_text())
+                state['creation_response'] = response
+                state_path.write_text(json.dumps(state))
+                result = self.run_release('publish', str(candidate), manifest['tag'], 'a' * 40, '123', env=env)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('creation response', result.stderr)
+                state = json.loads(state_path.read_text())
+                self.assertTrue(state['release']['draft'])
+                self.assertEqual(state['assets'], [])
+                self.assertEqual(state.get('refs', []), [])
+                self.assertFalse(any(call[0] == 'release' for call in state['calls']))
+
     def test_interrupted_upload_retries_draft_then_rejects_published_version(self):
         with tempfile.TemporaryDirectory() as directory:
             candidate, manifest = self.candidate_fixture(directory)
@@ -148,7 +200,9 @@ print(json.dumps(result))
             third = self.run_release(*args, env=env)
             self.assertNotEqual(third.returncode, 0)
             self.assertIn('already published', third.stderr)
-            self.assertEqual(sum(call[:2] == ['release', 'create'] for call in state['calls']), 1)
+            self.assertEqual(sum(call[:2] == ['api', 'repos/kuan0808/MonsterDeleter/releases']
+                                 and '--method' in call and call[call.index('--method') + 1] == 'POST'
+                                 for call in state['calls']), 1)
 
     def test_corrupt_or_extra_candidate_files_cannot_publish(self):
         for mutation in ('corrupt', 'extra', 'adhoc'):

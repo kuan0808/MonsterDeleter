@@ -15,19 +15,17 @@ Does this need a monster? Absolutely not. That's why it's here.
 
 ## Get MonsterDeleter
 
-**The first public download is being prepared. No public release is available yet.**
-Watch the [Releases page](https://github.com/kuan0808/MonsterDeleter/releases) for the
-first signed and notarized build, or [build it yourself](docs/development.md#build-and-install).
+**[Download the latest release](https://github.com/kuan0808/MonsterDeleter/releases/latest)**
+and give your Trash a little stage presence. The app is signed with Developer ID and notarized
+by Apple. Prefer to tinker? [Build it yourself](docs/development.md#build-and-install).
 
-The release will have **one universal app for macOS 15 or later**. The same download works on
+There is **one universal app for macOS 15 or later**. The same download works on
 Apple silicon and Intel; there is no processor choice to make.
 
-Once a release is available:
-
-1. Download the **DMG** from its assets, open it, and drag MonsterDeleter into **Applications**.
+1. Download the **DMG** from the release's assets, open it, and drag MonsterDeleter into **Applications**.
    The **ZIP** contains the same app if you prefer to unzip and copy it yourself.
-2. Open MonsterDeleter once and follow the short introduction. Look for its icon in the menu
-   bar; it does not occupy the Dock.
+2. Quit any older copy, then open MonsterDeleter from Applications and follow the short
+   introduction. Look for its icon in the menu bar; it does not occupy the Dock.
 3. Choose **Play Demo** from the menu bar to meet your monster using a scratch file.
 
 Each release includes installation instructions and SHA-256 checksums. GitHub's automatic
