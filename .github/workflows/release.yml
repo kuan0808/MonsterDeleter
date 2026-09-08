@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.repository == 'kuan0808/monsterdeleter-mac' && github.ref == 'refs/heads/main'
+    if: github.repository == 'kuan0808/MonsterDeleter' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
       actions: read

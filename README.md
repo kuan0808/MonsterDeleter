@@ -16,7 +16,7 @@ Does this need a monster? Absolutely not. That's why it's here.
 ## Get MonsterDeleter
 
 **The first public download is being prepared. No public release is available yet.**
-Watch the [Releases page](https://github.com/kuan0808/monsterdeleter-mac/releases) for the
+Watch the [Releases page](https://github.com/kuan0808/MonsterDeleter/releases) for the
 first signed and notarized build, or [build it yourself](docs/development.md#build-and-install).
 
 The release will have **one universal app for macOS 15 or later**. The same download works on
@@ -75,7 +75,7 @@ Built with Swift, SwiftUI and AppKit. No Xcode project or package dependencies.
 
 - [Development guide](docs/development.md): build, test, character packs and architecture.
 - [Release guide](docs/releasing.md): versioned builds, signing and publication.
-- [Report a bug or suggest an idea](https://github.com/kuan0808/monsterdeleter-mac/issues).
+- [Report a bug or suggest an idea](https://github.com/kuan0808/MonsterDeleter/issues).
 
 ## Credits & inspiration
 

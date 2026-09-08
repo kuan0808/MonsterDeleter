@@ -12,7 +12,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = 'kuan0808/monsterdeleter-mac'
+SOURCE = 'kuan0808/MonsterDeleter'
 
 
 def version(tag, plist=None):

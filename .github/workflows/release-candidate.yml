@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   candidate:
-    if: github.repository == 'kuan0808/monsterdeleter-mac' && github.ref == 'refs/heads/main'
+    if: github.repository == 'kuan0808/MonsterDeleter' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/ci.yml
     with:
       release_tag: ${{ inputs.tag }}

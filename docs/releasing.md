@@ -1,7 +1,7 @@
 # GitHub downloads
 
 Source and downloads share the existing
-`kuan0808/monsterdeleter-mac` repository. The operator owns the visibility change after the
+`kuan0808/MonsterDeleter` repository. The operator owns the visibility change after the
 tracked-source/history and provenance review. Release automation never creates repositories,
 changes visibility, exports credentials, or publishes from a pull request, fork, or non-main
 branch. GitHub's automatic source archives contain this repository's tagged source.
@@ -90,7 +90,7 @@ its entire file allowlist and hashes, and publishes only after verifying a compl
 remote asset SHA-256 digests and sizes. The release tag and body both pin the exact reviewed app source commit. No code or git history
 is copied across repositories.
 
-The stable user link is `https://github.com/kuan0808/monsterdeleter-mac/releases/latest`.
+The stable user link is `https://github.com/kuan0808/MonsterDeleter/releases/latest`.
 After publishing, verify the public release and download both archives through that route,
 check SHA-256, and record normal Finder installation/Gatekeeper acceptance on an approved test
 Mac. Never strip quarantine or disable Gatekeeper. A signed build is not claimed accepted on a

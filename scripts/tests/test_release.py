@@ -31,22 +31,22 @@ print(json.dumps(responses[key]))
         data = Path(directory) / 'responses.json'
         data.write_text(json.dumps(responses))
         return dict(os.environ, PATH=f'{directory}:' + os.environ['PATH'],
-                    TEST_RESPONSES=str(data), GITHUB_REPOSITORY='kuan0808/monsterdeleter-mac',
+                    TEST_RESPONSES=str(data), GITHUB_REPOSITORY='kuan0808/MonsterDeleter',
                     GITHUB_REF='refs/heads/main', GITHUB_EVENT_NAME='workflow_dispatch', GITHUB_SHA='a' * 40)
 
     def test_source_run_rejects_failed_or_untrusted_inputs(self):
         sha = 'a' * 40
         run = dict(id=123, head_sha=sha, head_branch='main', event='workflow_dispatch',
                    path='.github/workflows/release-candidate.yml', status='completed',
-                   conclusion='success', repository={'full_name': 'kuan0808/monsterdeleter-mac'},
-                   head_repository={'full_name': 'kuan0808/monsterdeleter-mac'})
+                   conclusion='success', repository={'full_name': 'kuan0808/MonsterDeleter'},
+                   head_repository={'full_name': 'kuan0808/MonsterDeleter'})
         for delta in ({'conclusion': 'failure'}, {'head_sha': 'b' * 40},
                       {'event': 'pull_request'}, {'head_branch': 'untrusted'},
                       {'path': '.github/workflows/ci.yml'}, {'status': 'in_progress'},
                       {'head_repository': {'full_name': 'someone/fork'}}):
             with self.subTest(delta=delta), tempfile.TemporaryDirectory() as directory:
                 env = self.github_fixture(directory, {
-                    'api repos/kuan0808/monsterdeleter-mac/actions/runs/123': run | delta})
+                    'api repos/kuan0808/MonsterDeleter/actions/runs/123': run | delta})
                 result = self.run_release('source-run', '123', sha, env=env)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('trusted successful candidate', result.stderr)
@@ -81,7 +81,7 @@ state['calls'].append(args)
 result = None
 if args[0] == 'api':
     endpoint = args[1]
-    if endpoint == 'repos/kuan0808/monsterdeleter-mac':
+    if endpoint == 'repos/kuan0808/MonsterDeleter':
         result = {'private': False, 'default_branch': 'main'}
     elif '/releases?' in endpoint:
         result = [[state['release']] if state['release'] else []]
@@ -124,7 +124,7 @@ print(json.dumps(result))
         state = Path(directory) / 'state.json'
         state.write_text(json.dumps(dict(release=None, assets=[], calls=[])))
         env = dict(os.environ, PATH=f'{directory}:' + os.environ['PATH'], TEST_STATE=str(state),
-                   GITHUB_REPOSITORY='kuan0808/monsterdeleter-mac', GITHUB_REF='refs/heads/main',
+                   GITHUB_REPOSITORY='kuan0808/MonsterDeleter', GITHUB_REF='refs/heads/main',
                    GITHUB_EVENT_NAME='workflow_dispatch', GITHUB_SHA='a' * 40)
         return env, state
 
@@ -171,17 +171,17 @@ print(json.dumps(result))
         run = dict(id=123, head_sha=sha, head_branch='main', event='workflow_dispatch',
                    path='.github/workflows/release-candidate.yml', status='completed',
                    conclusion='success', run_attempt=2,
-                   repository={'full_name': 'kuan0808/monsterdeleter-mac'},
-                   head_repository={'full_name': 'kuan0808/monsterdeleter-mac'})
+                   repository={'full_name': 'kuan0808/MonsterDeleter'},
+                   head_repository={'full_name': 'kuan0808/MonsterDeleter'})
         artifact = dict(id=456, name='release-candidate-123-1', expired=False)
         for artifacts, succeeds in (([artifact], True), ([], False),
                                     ([artifact, artifact | {'id': 789, 'name': 'release-candidate-123-2'}], False),
                                     ([artifact | {'expired': True}], False)):
             with self.subTest(artifacts=artifacts), tempfile.TemporaryDirectory() as directory:
                 env = self.github_fixture(directory, {
-                    'api repos/kuan0808/monsterdeleter-mac/actions/runs/123': run,
-                    f'api repos/kuan0808/monsterdeleter-mac/compare/{sha}...main': {'status': 'identical'},
-                    'api repos/kuan0808/monsterdeleter-mac/actions/runs/123/artifacts?per_page=100':
+                    'api repos/kuan0808/MonsterDeleter/actions/runs/123': run,
+                    f'api repos/kuan0808/MonsterDeleter/compare/{sha}...main': {'status': 'identical'},
+                    'api repos/kuan0808/MonsterDeleter/actions/runs/123/artifacts?per_page=100':
                         {'total_count': len(artifacts), 'artifacts': artifacts}})
                 result = self.run_release('source-run', '123', sha, env=env)
                 self.assertEqual(result.returncode == 0, succeeds, result.stderr)
