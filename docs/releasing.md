@@ -90,6 +90,13 @@ its entire file allowlist and hashes, and publishes only after verifying a compl
 remote asset SHA-256 digests and sizes. The release tag and body both pin the exact reviewed app source commit. No code or git history
 is copied across repositories.
 
+Before creating a draft, automation lists all release pages and refuses ambiguous or already
+published versions. Draft creation uses the REST API's JSON response directly: it must include a
+positive integer release ID and match the candidate's tag, exact target commit, title and body,
+with draft true and prerelease false, before uploads. A new draft need not appear immediately in the release
+list. Asset checks and the final draft read use that returned ID; `gh release upload` and
+`gh release edit` still perform their own tag-to-draft resolution.
+
 The stable user link is `https://github.com/kuan0808/MonsterDeleter/releases/latest`.
 After publishing, verify the public release and download both archives through that route,
 check SHA-256, and record normal Finder installation/Gatekeeper acceptance on an approved test
@@ -103,10 +110,15 @@ recipient machine until that route has actually been tested.
   ambiguity. Dispatch a fresh candidate run, rather than guessing which artifact passed.
 - Failed notarization, runtime checks, missing/expired artifacts or wrong source runs cannot
   publish. Downloading an ordinary PR/ad hoc CI artifact is not a stable-release route.
-- A failed upload leaves a draft. Dispatch the identical publish command again: only a draft
-  with the same title/body, target commit and matching uploaded assets can resume. Existing
-  files are never overwritten. A mismatched draft/asset requires operator reconciliation;
-  the workflow does not delete evidence or replace it automatically.
+- An interrupted creation or failed upload may leave a draft. Creation is never retried inside
+  a publish invocation. If the creation response is missing or rejected, inspect the release
+  state before dispatching again; an absent list entry does not prove creation failed.
+- A same-input dispatch can resume only when the initial paginated list finds exactly one
+  matching draft with the same title/body, target commit and matching uploaded assets. The
+  candidate must still be current main and match the dispatch commit. Existing files are never
+  overwritten. A mismatched draft/asset requires operator reconciliation; the workflow does
+  not delete evidence or replace it automatically. Later CLI upload/edit resolution can still
+  fail, so retaining the creation response does not guarantee uninterrupted publication.
 - A published tag or a pre-existing unrelated tag stops publication. A retry after successful
   publication also stops; inspect the existing Release rather than publishing it twice.
 - Expired candidate artifacts require a new candidate and review of its new hashes. Never
